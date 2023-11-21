@@ -1,0 +1,85 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+	"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html>
+<title>Dominion Card Picker</title>
+<head>
+	<meta http-equiv="Content-type" content="text/html;charset=UTF-8" />
+	<link type="text/css" href="css/dominion.css" media="screen" rel="stylesheet" />
+	<script type="text/javascript" src="js/card_data.js"></script>
+	<script type="text/javascript" src="js/dominon_picker.js"></script>
+	<!--[if lte IE 8]>
+		<script type="text/javascript" src="js/augment.min.js"></script>
+	<![endif]-->
+</head>
+<body onload="createPreGenMenu();displayPicks()">
+<h1>Dominion Card Picker.</h1>
+<form name="controlForm">
+	<div id="contols">
+		<p>Choose any combination of card sets below to create a random game.</p>
+			<label><input type="checkbox" value="1" name="base" checked>Base&nbsp;Set</label> 
+			<label><input type="checkbox" value="2" name="intrigue">Intrigue&nbsp;Set</label> 
+			<label><input type="checkbox" value="3" name="seaside">Seaside&nbsp;Set</label> 
+			<label><input type="checkbox" value="4" name="alchemy">Alchemy&nbsp;Set</label> 
+			<label><input type="checkbox" value="5" name="prosperity">Prosperity&nbsp;Set</label> 
+			<label><input type="checkbox" value="6" name="cornucopia">Cornucopia&nbsp;Set</label> 
+			<label><input type="checkbox" value="7" name="hinterlands">Hinterlands&nbsp;Set</label> 
+			<label><input type="checkbox" value="8" name="darkages">Dark&nbsp;Ages&nbsp;Set</label> 
+			<label><input type="checkbox" value="9" name="guilds">Guilds&nbsp;Set</label> 
+			<label><input type="checkbox" value="10" name="custom">Custom&nbsp;Set</label>
+			<br />
+			<label><input type="checkbox" value="20" name="envoy">Envoy&nbsp;Promo</label> 
+			<label><input type="checkbox" value="21" name="blackMarket">Blackmarket&nbsp;Promo</label> 
+			<label><input type="checkbox" value="22" name="stash">Stash&nbsp;Promo</label>
+			<label><input type="checkbox" value="23" name="walledvillage">Walled&nbsp;Village&nbsp;Promo</label>
+			<label><input type="checkbox" value="24" name="governor">Governor&nbsp;Promo</label>
+			<br />
+			<label><input type="checkbox" value="31" name="allSets" onClick="allCards();"><span id="allCardsText">Select&nbsp;All&nbsp;Sets</span></label> 
+			<label><input type="checkbox" value="32" name="allSets" onClick="allPromoCards();"><span id="allPromoCardsText">Select&nbsp;All&nbsp;Promo&nbsp;Cards</span></label>
+			<br />
+			<label><input type="checkbox" value="35" name="attackBalance">Provide Reaction card(s) if there is at least one Attack card</label>&nbsp;
+			<label title="Chooses one reaction cards from the selected card sets that best represents a beneficial reaction to the attack."><input type="checkbox" value="36" name="smartAttackBalance">Smart Reaction Cards</label>&nbsp;
+			<label><input type="checkbox" value="40" name="noAttack">No Attack Cards</label>
+			<br/>
+			<label><input type="checkbox" value="32" name="randomAlchemy" title="Uses the recommended 3-5 Alchemy card generation rule."><span title="Uses the recommended 3-5 Alchemy card generation rule.">3-5 Alchemy Card game</span></label>
+			<br />
+			Force at least:&nbsp;
+			<label><input type="checkbox" value="50" name="mustActions" title="This will force at least 1 card that offers +2 actions (or more) into the Kingdom.">+2&nbsp;actions</label> 
+			<label><input type="checkbox" value="51" name="mustCards" title="This will force at least 1 card that offers a +2 card draw (or more) into the Kingdom.">+2&nbsp;cards</label> 
+			<label><input type="checkbox" value="52" name="mustBuys" title="This will force at least 1 card that offers +1 buy (or more) into the Kingdom.">+1&nbsp;buy</label> 
+			<label><input type="checkbox" value="53" name="mustCoppers" title="This will force at least 1 card that offers +2 temporary coppers (or more) into the Kingdom.">+2&nbsp;coppers</label> 
+			<br />
+			Sort by:&nbsp;
+			<label><input type="radio" name="sortOption" value="0" checked>Name</label>
+			<label><input type="radio" name="sortOption" value="1">Cost</label>
+			<label><input type="radio" name="sortOption" value="2">Set</label>
+			<br />
+			Generate
+			<select name="numberOfCards">
+				<option value="10" selected>10</option>
+				<option value="11">11</option>
+				<option value="12">12</option>
+				<option value="13">13</option>
+				<option value="14">14</option>
+				<option value="15">15</option>
+			</select>
+			<input type="button" value="New Random Cards" onClick="displayPicks()");
+			<br />
+		Or, choose a pre-generated card set:
+			<span id="preGenContainer" style="display:none"></span>
+	</div>
+</form>
+<!-- Container to load with cards -->
+<div id="content">
+	<h2>Game Type:&nbsp;<span id="gameType"></span></h2>
+</div>
+<div id="footer">
+	<p>
+		Written by <a href="http://www.chrisdouglas.ca/games/dominion/">Chris Douglas</a>, inspired by <a href="http://www.hiwiller.com/about-zack/" target="_blank">Zack Hiwiller's</a> <a href="http://www.hiwiller.com/dominion/" target="_blank">Dominion Card Randomizer!</a><br />
+		Dominion was created by Donald X. Vaccarino and published by <a href="http://www.riograndegames.com/games.html?id=278" target="_blank">Rio Grande Games</a>. <br />
+		This script is not provided by nor endorsed by Mr. Vaccarino or Rio Grande Games. <br />
+		Card images from <a href="http://www.boardgamegeek.com/boardgame/36218/dominion" target="_blank">BoardGameGeeks</a>.
+	</p>
+</div>
+</body>
+</html>
