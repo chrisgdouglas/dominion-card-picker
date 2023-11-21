@@ -1,0 +1,41 @@
+body {
+	color:#DDDDDD;
+	background-color:#444444;
+	font-family: sans-serif, Candra, Verdana, Arial;
+}
+td {
+	vertical-align:top;
+}
+td.custom {
+	vertical-align:top;
+	padding-top:10px;
+	padding-left:10px;
+	color:black;
+}
+a {
+	color:black;
+}
+h1 {
+	line-height:0em;
+}
+h2 {
+	line-height:0em;
+}
+.regular {
+	color:#DDDDDD;
+}
+.red {
+	color:red;
+}
+#content {
+	position:absolute;
+	left:100px;
+	display:none;
+	height: 460px;
+}
+#footer {
+	position:relative;
+	top:1000px;
+	font-size:.6em;
+	text-align:center;
+}
