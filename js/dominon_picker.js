@@ -436,7 +436,13 @@ function determineSets() {
 	return a;  // send back all the valid numbers to choose from, ordered in an array.
 }
 
-// if the 3-5 Alchemy set option is enabled, grab only the alchemy cards for Alchemy only generation
+/**
+* // if the 3-5 Alchemy set option is enabled, grab only the alchemy cards for Alchemy only generation
+* @param {object} f - The form object, used to determine if the Alchemy set is checked.
+* @param {boolean} noAttackCards - Whether or not to include attack cards in the final set.
+* @param {boolean} alchemyChecked - Whether or not to include the Alchemy set.
+* @returns {array} - An array of Alchemy card IDs.
+*/
 function getAlchemySet() {
 	var a = [], 
 		f = document.controlForm,
@@ -991,7 +997,13 @@ function bgClr(selCard) {
 	return backgroundClr;
 }
 
-// Check to see if a selected cardset brings a variant rule into play. If only the variant set is selected, force the variant rule. Otherwise, randomly choose a card to see if the rule is used.
+/*
+* Check to see if a selected cardset brings a variant rule into play.
+* If only the variant set is selected, force the variant rule.
+* Otherwise, randomly choose a card to see if the rule is used.
+* @param  {Array} finalCards The list of selected cards
+* @return {String}            The game type in plain english
+*/
 function gameType(finalCards) {
 	var retVal = "regular", prosperityChecked = finalCards.some(isProsperity), darkagesChecked = finalCards.some(isDarkages);
 	if (prosperityChecked && noneChecked("prosperity")) {
@@ -1053,22 +1065,31 @@ function cardsInSet() {
 	return(a[0]);
 }
 
-// get the ID number of a specific card
+/**
+ * Gets the ID number of a specific card.
+ *
+ * @param {string} cardName - The name of the card to search for.
+ * @return {number} The ID number of the card, or null if no card is found.
+ */
 function getCardId(cardName) {
-    for (var x in cards) {
+    for (var x = 0, l = cards.length; x < l; x++) {
         if (cards[x].name === cardName) {
             return cards[x].id;
         }
     }
+	return null;
 }
 
-//Searches the text name of the card and returns all matching IDs in an array.
+/**
+ * Searches for cards with a name that matches the given cardName.
+ *
+ * @param {string} cardName - The name of the card to search for.
+ * @return {Array} An array of card IDs that match the search criteria.
+ */
 function searchCards(cardName) {
-	var searchTerm = cardName.toLowerCase(),
-		searchResults = [];
-    for (var x in cards) {
-		inCardName = cards[x].name.toLowerCase();
-        if (inCardName.indexOf(searchTerm) !== -1) {
+	var searchResults = [];
+    for (var x = 0, l = cards.length; x < l; x++) {
+		if (cards[x].name.toLowerCase().indexOf(cardName.toLowerCase()) !== -1) {
             searchResults.push(cards[x].id);
         }
     }
