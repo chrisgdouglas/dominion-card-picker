@@ -1,41 +1,71 @@
 body {
-	color:#DDDDDD;
-	background-color:#444444;
+	color: #ddd;
+	background-color: #444;
 	font-family: sans-serif, Candra, Verdana, Arial;
 }
-td {
-	vertical-align:top;
-}
+td { vertical-align: top; }
 td.custom {
-	vertical-align:top;
-	padding-top:10px;
-	padding-left:10px;
-	color:black;
+	vertical-align: top;
+	padding: 10px 0 0 10px;
+	color: black;
 }
-a {
-	color:black;
-}
-h1 {
-	line-height:0em;
-}
-h2 {
-	line-height:0em;
-}
-.regular {
-	color:#DDDDDD;
-}
-.red {
-	color:red;
-}
+a { color: black; }
+h1, h2 { line-height: 0; }
+
+.regular { color: #ddd; }
+.red { color: red; }
+
 #content {
-	position:absolute;
-	left:100px;
-	display:none;
+	position: absolute;
+	left: 100px;
+	display: none;
 	height: 460px;
 }
 #footer {
-	position:relative;
-	top:1000px;
-	font-size:.6em;
-	text-align:center;
+	position: relative;
+	top: 1000px;
+	font-size: 0.6em;
+	text-align: center;
+}
+
+.card-table {
+	width: 750px;
+	background-color: #ccc;
+	border-spacing: 2px;
+	padding: 2px;
+	height: 460px;
+}
+.card-table-large { height: 690px; }
+
+.card-cell {
+	width: 150px;
+	height: 230px;
+}
+.card-cell img { border: 0; }
+
+.set-base { background-color: red; }
+.set-intrigue { background-color: blue; }
+.set-seaside { background-color: orange; }
+.set-alchemy { background-color: purple; }
+.set-prosperity { background-color: green; }
+.set-cornucopia { background-color: yellow; }
+.set-hinterlands { background-color: chartreuse; }
+.set-darkages { background-color: lightslategray; }
+.set-guilds { background-color: white; }
+.set-custom { background-color: #ccc; }
+
+.bane-table {
+	width: 152px;
+	background-color: #ccc;
+	border-spacing: 2px;
+	padding: 2px;
+	height: 228px;
+}
+.bane-title {
+	background-color: black;
+	color: white;
+	width: 150px;
+	height: 230px;
+	vertical-align: middle;
+	white-space: nowrap;
 }
