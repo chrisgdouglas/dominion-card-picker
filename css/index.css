@@ -542,17 +542,18 @@ select:hover, select:focus { border-color: var(--accent); outline: none; }
    ════════════════════════════════════════════════════ */
 .card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, 150px);
+  grid-template-columns: repeat(auto-fill, 158px); /* 150px image + 4px border each side */
   gap: 8px;
   margin-bottom: 24px;
-  max-width: 782px; /* 5 × 150px + 4 × 8px gap */
+  max-width: 822px; /* 5 × 158px + 4 × 8px gap */
 }
 .card-cell {
-  width: 150px;
-  height: 232px;
+  width: 158px;
+  height: 240px; /* 232px image + 4px border each side */
   border-radius: 6px;
   overflow: hidden;
   position: relative;
+  border: 4px solid transparent;
   transition: transform 160ms ease, box-shadow 160ms ease;
   cursor: default;
 }
@@ -573,16 +574,29 @@ select:hover, select:focus { border-color: var(--accent); outline: none; }
   background-position: center;
 }
 
-.set-base        { background-color: var(--set-base); }
-.set-intrigue    { background-color: var(--set-intrigue); }
-.set-seaside     { background-color: var(--set-seaside); }
-.set-alchemy     { background-color: var(--set-alchemy); }
-.set-prosperity  { background-color: var(--set-prosperity); }
-.set-cornucopia  { background-color: var(--set-cornucopia); }
-.set-hinterlands { background-color: var(--set-hinterlands); }
-.set-darkages    { background-color: var(--set-darkages); }
-.set-guilds      { background-color: var(--set-guilds); }
-.set-custom      { background-color: var(--set-custom); }
+/* Set-colored borders — muted on dark (default), full saturation on light */
+.set-base        { border-color: color-mix(in srgb, var(--set-base) 65%, var(--bg-elevated)); }
+.set-intrigue    { border-color: color-mix(in srgb, var(--set-intrigue) 65%, var(--bg-elevated)); }
+.set-seaside     { border-color: color-mix(in srgb, var(--set-seaside) 65%, var(--bg-elevated)); }
+.set-alchemy     { border-color: color-mix(in srgb, var(--set-alchemy) 65%, var(--bg-elevated)); }
+.set-prosperity  { border-color: color-mix(in srgb, var(--set-prosperity) 65%, var(--bg-elevated)); }
+.set-cornucopia  { border-color: color-mix(in srgb, var(--set-cornucopia) 65%, var(--bg-elevated)); }
+.set-hinterlands { border-color: color-mix(in srgb, var(--set-hinterlands) 65%, var(--bg-elevated)); }
+.set-darkages    { border-color: color-mix(in srgb, var(--set-darkages) 65%, var(--bg-elevated)); }
+.set-guilds      { border-color: color-mix(in srgb, var(--set-guilds) 65%, var(--bg-elevated)); }
+.set-custom      { border-color: color-mix(in srgb, var(--set-custom) 65%, var(--bg-elevated)); }
+
+/* Light theme: full-saturation borders */
+[data-theme="light"] .set-base        { border-color: var(--set-base); }
+[data-theme="light"] .set-intrigue    { border-color: var(--set-intrigue); }
+[data-theme="light"] .set-seaside     { border-color: var(--set-seaside); }
+[data-theme="light"] .set-alchemy     { border-color: var(--set-alchemy); }
+[data-theme="light"] .set-prosperity  { border-color: var(--set-prosperity); }
+[data-theme="light"] .set-cornucopia  { border-color: var(--set-cornucopia); }
+[data-theme="light"] .set-hinterlands { border-color: var(--set-hinterlands); }
+[data-theme="light"] .set-darkages    { border-color: var(--set-darkages); }
+[data-theme="light"] .set-guilds      { border-color: var(--set-guilds); }
+[data-theme="light"] .set-custom      { border-color: var(--set-custom); }
 
 /* ── Bane pile ── */
 .bane-section { margin-top: 4px; }
