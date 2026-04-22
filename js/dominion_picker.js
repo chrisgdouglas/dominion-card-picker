@@ -4,11 +4,18 @@
 
 const { cards, preGenSets } = window;
 
-/** @type {string[]} Main expansion sets (load order) */
-const CARD_SETS = [
-  'base', 'intrigue', 'seaside', 'alchemy', 'prosperity',
-  'cornucopia', 'hinterlands', 'darkages', 'guilds',
-];
+/** @type {Object<string, string>} Main expansion sets: form-field key → display label */
+const CARD_SETS = {
+  base:        'Base Set',
+  intrigue:    'Intrigue',
+  seaside:     'Seaside',
+  alchemy:     'Alchemy',
+  prosperity:  'Prosperity',
+  cornucopia:  'Cornucopia',
+  hinterlands: 'Hinterlands',
+  darkages:    'Dark Ages',
+  guilds:      'Guilds',
+};
 
 /** @type {Object<string, string>} Promo card ID→name mapping */
 const PROMO_NAMES = {
@@ -89,9 +96,9 @@ const form = () => document.forms.controlForm;
 const randomChoice = (arr) => arr[Math.floor(Math.random() * arr.length)];
 const unique = (arr) => [...new Set(arr)];
 
-// ─────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------
 // Card predicates (card ID → boolean)
-// ─────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------
 
 const isYoungWitch = (id) => cards[id].name === 'Young Witch';
 const isAttack = (id) => cards[id].type === 'Attack';
@@ -135,9 +142,9 @@ function selRadio(radioList) {
   return checked ? checked.value : '0';
 }
 
-// ─────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------
 // Card sorting comparators
-// ─────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------
 
 const compareCardName = (a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase());
 const compareCardCost = (a, b) => a.cost - b.cost;
@@ -181,7 +188,7 @@ function noneChecked(setID) {
  */
 function checkForm() {
   const f = form();
-  if (!CARD_SETS.some((s) => f[s].checked)) {
+  if (!Object.keys(CARD_SETS).some((s) => f[s].checked)) {
     alert('Please choose a cardset.');
     return false;
   }
@@ -230,7 +237,7 @@ function determineSets() {
   const useRandomAlchemy = f.alchemy.checked && f.randomAlchemy.checked;
 
   const checkedSets = new Set(
-    CARD_SETS.filter((s) => f[s].checked && !(s === 'alchemy' && useRandomAlchemy))
+    Object.keys(CARD_SETS).filter((s) => f[s].checked && !(s === 'alchemy' && useRandomAlchemy))
   );
   if (f.custom?.checked) checkedSets.add('custom');
   const checkedPromos = new Set(
@@ -668,6 +675,51 @@ function displayPicks(selObj) {
 }
 
 /**
+ * Build a single card-set checkbox label element.
+ * @param {string} name - Form field name (matches card set key)
+ * @param {string} label - Display label
+ * @param {number} value - Numeric form value (must be < 20 for toggleAllSets filter)
+ * @param {boolean} checked - Default checked state
+ * @returns {HTMLLabelElement}
+ */
+function makeSetCheckbox(name, label, value, checked) {
+  const lbl = document.createElement('label');
+  lbl.className = 'check-item';
+  const input = document.createElement('input');
+  input.type = 'checkbox';
+  input.name = name;
+  input.value = String(value);
+  if (checked) input.checked = true;
+  const box = document.createElement('span');
+  box.className = 'check-box';
+  const dot = document.createElement('span');
+  dot.className = 'set-dot';
+  dot.dataset.set = name;
+  lbl.appendChild(input);
+  lbl.appendChild(box);
+  lbl.appendChild(dot);
+  lbl.appendChild(document.createTextNode(label));
+  return lbl;
+}
+
+/**
+ * Populate #cardSetGrid from CARD_SETS + Custom.
+ * Custom is always last; disabled when no custom cards exist in card_data.js.
+ */
+function buildCardSetCheckboxes() {
+  const grid = document.getElementById('cardSetGrid');
+  if (!grid) return;
+  Object.entries(CARD_SETS).forEach(([key, label], i) => {
+    grid.appendChild(makeSetCheckbox(key, label, i + 1, key === 'base'));
+  });
+  const customItem = makeSetCheckbox('custom', 'Custom', Object.keys(CARD_SETS).length + 1, false);
+  if (!CARD_LIST.some((c) => c.set === 'custom')) {
+    customItem.querySelector('input').disabled = true;
+  }
+  grid.appendChild(customItem);
+}
+
+/**
  * Build and inject the pre-generated set dropdown selector.
  * Auto-selects a set from URL querystring if present on page load.
  */
@@ -709,7 +761,7 @@ function toggleAllSets() {
     checkboxes.forEach((cb) => { cb.checked = true; });
     label.innerHTML = 'Reset&nbsp;Set&nbsp;Selection';
   } else {
-    checkboxes.forEach((cb) => { if (cb.value !== '1') cb.checked = false; });
+    checkboxes.forEach((cb) => { if (cb.name !== 'base') cb.checked = false; });
     form().randomAlchemy.checked = false;
     label.innerHTML = 'Select&nbsp;All&nbsp;Sets';
   }
@@ -772,12 +824,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Disable Custom Set if card_data.js has no custom cards
-  if (!CARD_LIST.some((c) => c.set === 'custom')) {
-    const customCb = document.querySelector('input[name="custom"]');
-    if (customCb) customCb.disabled = true;
-  }
-
+  buildCardSetCheckboxes();
   createPreGenMenu();
   displayPicks();
   document.getElementById('newRandomBtn').addEventListener('click', () => displayPicks());
