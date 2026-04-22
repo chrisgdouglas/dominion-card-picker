@@ -54,13 +54,27 @@ const GAME_TYPE_LABELS = {
   prosperitydarkageslooter: 'Colony & Shelter & Looter',
 };
 
+const MAX_PICK_ATTEMPTS = 1000;
+
+// Pre-built lookups — card_data.js is static, these never change.
+const CARD_LIST = Object.values(cards);
+const CARD_BY_NAME = new Map(CARD_LIST.map((c) => [c.name, c.id]));
+
 // Memoizes determineSets() by checkbox-state signature.
 const previousRun = { choice: '', storedSet: [] };
+
+// Alchemy sub-pool cache. Invalidated when the noAttack checkbox changes.
 let alchemySet = [];
-let pageLoaded = false;
+let alchemySetNoAttack = null;
+
+// Toggle state for the "Select All" checkboxes — avoids reading state from DOM text.
+let allSetsSelected = false;
+let allPromosSelected = false;
+
+// queryStringConsumed prevents re-applying the URL pre-gen on subsequent random picks.
+let queryStringConsumed = false;
 
 const form = () => document.forms.controlForm;
-const cardList = () => Object.values(cards);
 const randomChoice = (arr) => arr[Math.floor(Math.random() * arr.length)];
 const unique = (arr) => [...new Set(arr)];
 
@@ -76,28 +90,25 @@ const isProsperity = (id) => cards[id].set === 'prosperity';
 const isDarkages = (id) => cards[id].set === 'darkages';
 
 function getCardId(name) {
-  return cardList().find((c) => c.name === name)?.id ?? null;
+  return CARD_BY_NAME.get(name) ?? null;
 }
 
 function searchCards(name) {
   const lower = name.toLowerCase();
-  return cardList()
+  return CARD_LIST
     .filter((c) => c.name.toLowerCase().includes(lower))
     .map((c) => c.id);
 }
 
+// Returns the checked radio's value, or '0' as a default sentinel.
 function selRadio(radioList) {
   const checked = [...radioList].find((r) => r.checked);
-  return checked ? checked.value : false;
+  return checked ? checked.value : '0';
 }
 
-const compareCardName = (a, b) => {
-  const x = a.name.toLowerCase();
-  const y = b.name.toLowerCase();
-  return x < y ? -1 : x > y ? 1 : 0;
-};
-const compareCardCost = (a, b) => (a.cost < b.cost ? -1 : a.cost > b.cost ? 1 : 0);
-const compareCardSet = (a, b) => (a.set < b.set ? -1 : a.set > b.set ? 1 : 0);
+const compareCardName = (a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase());
+const compareCardCost = (a, b) => a.cost - b.cost;
+const compareCardSet = (a, b) => a.set.localeCompare(b.set);
 
 function sortCards(ids, sortType) {
   const sorter = { '0': compareCardName, '1': compareCardCost, '2': compareCardSet }[sortType] ?? compareCardName;
@@ -107,12 +118,14 @@ function sortCards(ids, sortType) {
     .map((c) => c.id);
 }
 
+// Returns true when no other major sets are checked alongside setID, used to
+// force variant rules. guilds is included so Prosperity+Guilds doesn't force Colony.
 function noneChecked(setID) {
   const f = form();
   const others = {
-    prosperity: ['hinterlands', 'cornucopia', 'alchemy', 'seaside', 'intrigue', 'base', 'darkages'],
-    darkages: ['hinterlands', 'cornucopia', 'alchemy', 'seaside', 'intrigue', 'base', 'prosperity'],
-    alchemy: ['hinterlands', 'cornucopia', 'seaside', 'intrigue', 'base', 'prosperity'],
+    prosperity: ['hinterlands', 'cornucopia', 'alchemy', 'seaside', 'intrigue', 'base', 'darkages', 'guilds'],
+    darkages: ['hinterlands', 'cornucopia', 'alchemy', 'seaside', 'intrigue', 'base', 'prosperity', 'guilds'],
+    alchemy: ['hinterlands', 'cornucopia', 'seaside', 'intrigue', 'base', 'prosperity', 'darkages', 'guilds'],
   }[setID];
   if (!others) return true;
   return !others.some((s) => f[s].checked);
@@ -173,17 +186,17 @@ function determineSets() {
       .map(([, name]) => name)
   );
 
+  // Use '|' separator to prevent value concatenation collisions (e.g. "1"+"32" vs "13"+"2").
   const signature = [...f.elements]
     .filter((el) => el.type === 'checkbox' && el.checked)
     .map((el) => el.value)
-    .join('');
+    .join('|');
 
-  if (signature === previousRun.choice) return previousRun.storedSet;
+  if (signature === previousRun.choice) return [...previousRun.storedSet];
 
-  const result = cardList()
+  const result = CARD_LIST
     .filter((c) => {
-      const isPromo = checkedPromos.has(c.name);
-      if (isPromo) return true;
+      if (checkedPromos.has(c.name)) return true;
       if (!checkedSets.has(c.set)) return false;
       if (noAttack && c.type === 'Attack') return false;
       return true;
@@ -192,17 +205,31 @@ function determineSets() {
 
   previousRun.choice = signature;
   previousRun.storedSet = result;
-  return result;
+  return [...result];
 }
 
 function getAlchemySet() {
   const f = form();
-  return cardList()
+  return CARD_LIST
     .filter((c) => c.set === 'alchemy' && (!f.noAttack.checked || c.type !== 'Attack'))
     .map((c) => c.id);
 }
 
+// Returns the alchemy sub-pool, rebuilding if noAttack state has changed since last call.
+function getOrRefreshAlchemySet() {
+  const noAttack = form().noAttack.checked;
+  if (alchemySet.length === 0 || alchemySetNoAttack !== noAttack) {
+    alchemySet = getAlchemySet();
+    alchemySetNoAttack = noAttack;
+  }
+  return alchemySet;
+}
+
+// Picks `count` unique random IDs from `pool`. Throws if pool is too small.
 function genCards(pool, count) {
+  if (count > pool.length) {
+    throw new Error(`Cannot pick ${count} unique cards from pool of ${pool.length}.`);
+  }
   const picked = new Set();
   while (picked.size < count) {
     picked.add(randomChoice(pool));
@@ -211,13 +238,16 @@ function genCards(pool, count) {
 }
 
 function pickAlchemyMix(selectedSets, total) {
-  if (alchemySet.length === 0) alchemySet = getAlchemySet();
+  const alchPool = getOrRefreshAlchemySet();
+  // alchCount fixed before the retry loop so each attempt uses the same proportion.
+  const alchCount = Math.min(Math.floor(Math.random() * 3) + 3, alchPool.length); // 3-5 capped
+  const remaining = total - alchCount;
   let mix = [];
+  let attempts = 0;
   while (mix.length < total) {
-    const alchCount = Math.floor(Math.random() * 3) + 3; // 3-5
-    const remaining = total - alchCount;
+    if (++attempts > MAX_PICK_ATTEMPTS) break;
     mix = unique([
-      ...genCards(alchemySet, alchCount),
+      ...genCards(alchPool, alchCount),
       ...genCards(selectedSets, remaining),
     ]);
   }
@@ -226,14 +256,12 @@ function pickAlchemyMix(selectedSets, total) {
 
 function addReactionCards() {
   const f = form();
-  const list = cardList()
+  const list = CARD_LIST
     .filter((c) => REACTION_SETS.includes(c.set) && f[c.set].checked && c.type === 'Reaction')
     .map((c) => c.id);
-  // NOTE: original picker pushes non-Reaction custom cards here (likely a bug,
-  // condition was `type !== "Reaction"` instead of `===`). Behavior preserved.
   if (f.custom?.checked) {
-    cardList()
-      .filter((c) => c.set === 'custom' && c.type !== 'Reaction')
+    CARD_LIST
+      .filter((c) => c.set === 'custom' && c.type === 'Reaction')
       .forEach((c) => list.push(c.id));
   }
   return list;
@@ -242,9 +270,9 @@ function addReactionCards() {
 function smartAttackBalance(selectedCards) {
   const f = form();
   const result = [];
-  const attackCards = selectedCards.filter(isAttack);
-  for (const id of attackCards) {
-    const name = cards[id].name;
+  // Deduplicate attack names so identical attack cards don't repeat rule evaluation.
+  const attackNames = [...new Set(selectedCards.filter(isAttack).map((id) => cards[id].name))];
+  for (const name of attackNames) {
     if (f.base.checked) result.push(getCardId('Moat'));
     if (f.intrigue.checked) result.push(getCardId('Secret Chamber'));
     if (f.seaside.checked) result.push(getCardId('Lighthouse'));
@@ -266,7 +294,8 @@ function smartAttackBalance(selectedCards) {
       if (DARKAGES_MARKET_SQUARE.has(name)) result.push(getCardId('Market Square'));
     }
   }
-  return unique(result);
+  // Filter nulls in case a named card is absent from card_data.js.
+  return unique(result.filter((id) => id !== null));
 }
 
 function checkSetOptions(genSet) {
@@ -288,20 +317,27 @@ function hasCardOptions() {
 function injectReaction(picked, reactionId, optionsMode) {
   if (optionsMode) {
     const idx = picked.findIndex((id) => cards[id].subType === '' && cards[id].type !== 'Attack');
-    if (idx !== -1) picked[idx] = reactionId;
-  } else {
-    picked.pop();
-    picked.push(reactionId);
+    if (idx !== -1) {
+      picked[idx] = reactionId;
+      return picked;
+    }
+    // No unconstrained slot — fall through to pop/push so reaction is never silently dropped.
   }
+  picked.pop();
+  picked.push(reactionId);
   return picked;
 }
 
+// Pre-filters eligible bane candidates so the selection loop always terminates.
 function pickBaneCard(selectedSets) {
-  while (true) {
-    const id = randomChoice(selectedSets);
+  const eligible = selectedSets.filter((id) => {
     const c = cards[id];
-    if ((c.cost === 2 || c.cost === 3) && c.subType !== 'potion') return c.id;
+    return (c.cost === 2 || c.cost === 3) && c.subType !== 'potion';
+  });
+  if (eligible.length === 0) {
+    throw new Error('No eligible bane card (cost 2-3, non-potion) found in selected sets.');
   }
+  return randomChoice(eligible);
 }
 
 function pickCards(numberOfCards) {
@@ -311,7 +347,12 @@ function pickCards(numberOfCards) {
   const optionsMode = hasCardOptions();
 
   let picked;
+  let attempts = 0;
   do {
+    if (++attempts > MAX_PICK_ATTEMPTS) {
+      // Constraints unsatisfiable with the current pool — break with last result.
+      break;
+    }
     picked = useRandomAlchemy
       ? pickAlchemyMix(selectedSets, numberOfCards)
       : genCards(selectedSets, numberOfCards);
@@ -378,54 +419,50 @@ function clearTable() {
 }
 
 function makeCardCell(cardObj) {
-  const td = document.createElement('td');
-  td.className = `card-cell set-${cardObj.set}`;
+  const div = document.createElement('div');
+  div.className = `card-cell set-${cardObj.set}`;
   const imgSrc = cardObj.set === 'custom' ? 'cards/000.png' : `cards/${cardObj.id}.jpg`;
-  const title = ` Card Name: ${cardObj.name} Cost: ${cardObj.cost} Set: ${cardObj.set}`;
+  const title = `${cardObj.name} — Cost: ${cardObj.cost} — Set: ${cardObj.set}`;
 
   if (cardObj.set === 'custom') {
-    td.classList.add('custom');
-    td.style.backgroundImage = `url(${imgSrc})`;
+    div.classList.add('custom');
+    div.style.backgroundImage = `url(${imgSrc})`;
     const span = document.createElement('span');
-    span.innerHTML = `${cardObj.name}<br />Cost: ${cardObj.cost}<br />Card Type: ${cardObj.type}`;
-    td.appendChild(span);
+    span.innerHTML = `${cardObj.name}<br />Cost: ${cardObj.cost}<br />Type: ${cardObj.type}`;
+    div.appendChild(span);
   } else {
     const img = new Image(148, 228);
     img.src = imgSrc;
     img.alt = title;
     img.title = title;
-    td.appendChild(img);
+    div.appendChild(img);
   }
-  return td;
+  return div;
 }
 
 function makeTable(finalCards, generateNumber, cardLoopCounter) {
-  const table = document.createElement('table');
-  table.id = 'cardDisplay';
-  table.className = generateNumber > 10 ? 'card-table card-table-large' : 'card-table';
-  let row;
+  const grid = document.createElement('div');
+  grid.id = 'cardDisplay';
+  grid.className = 'card-grid';
   for (let i = 0; i < cardLoopCounter; i++) {
-    if (i % 5 === 0) {
-      row = document.createElement('tr');
-      table.appendChild(row);
-    }
-    row.appendChild(makeCardCell(cards[finalCards[i]]));
+    grid.appendChild(makeCardCell(cards[finalCards[i]]));
   }
-  return table;
+  return grid;
 }
 
 function ywTable(finalCards, baneIndex) {
-  const table = document.createElement('table');
-  table.id = 'banePile';
-  table.className = 'bane-table';
-  const row = document.createElement('tr');
-  const titleTd = document.createElement('td');
-  titleTd.className = 'bane-title';
-  titleTd.textContent = 'Bane Pile';
-  row.appendChild(titleTd);
-  row.appendChild(makeCardCell(cards[finalCards[baneIndex]]));
-  table.appendChild(row);
-  return table;
+  const section = document.createElement('div');
+  section.id = 'banePile';
+  section.className = 'bane-section';
+  const label = document.createElement('div');
+  label.className = 'bane-label';
+  label.textContent = 'Bane Pile';
+  section.appendChild(label);
+  const baneCard = document.createElement('div');
+  baneCard.className = 'bane-card';
+  baneCard.appendChild(makeCardCell(cards[finalCards[baneIndex]]));
+  section.appendChild(baneCard);
+  return section;
 }
 
 function displayPicks(selObj) {
@@ -434,18 +471,18 @@ function displayPicks(selObj) {
   let generateNumber = 10;
   let finalCards;
 
-  if (location.search && !pageLoaded) {
+  if (location.search && !queryStringConsumed) {
     finalCards = preGenCards(location.search.substring(1));
-    pageLoaded = true;
+    queryStringConsumed = true;
   } else if (selObj) {
-    const selVal = selObj[selObj.selectedIndex].value;
+    const selVal = selObj.value;
     if (selVal === '0') {
       alert('Please choose a card build!');
-      return false;
+      return;
     }
     finalCards = preGenCards(selVal);
   } else {
-    if (!checkForm()) return false;
+    if (!checkForm()) return;
     generateNumber = parseInt(f.numberOfCards.value, 10);
     finalCards = pickCards(generateNumber);
   }
@@ -461,22 +498,21 @@ function displayPicks(selObj) {
 
   const type = gameType(finalCards);
   gameTypeElement.textContent = type;
-  gameTypeElement.className = type === 'Regular' ? 'regular' : 'red';
+  gameTypeElement.className = `game-type-badge ${type === 'Regular' ? 'regular' : 'red'}`;
   content.style.display = 'block';
-  return true;
 }
 
 function createPreGenMenu() {
   const preGenLoad = location.search ? parseInt(location.search.substring(1), 10) : 0;
   const select = document.createElement('select');
   select.name = 'preGen';
-  select.options[0] = new Option('Choose your Cardset', '0');
+  select.add(new Option('Choose your Cardset', '0'));
 
   for (const key of Object.keys(preGenSets)) {
     const set = preGenSets[key];
     const opt = new Option(`${key}: ${set.name} with ${set.cardSet}`, key);
     if (parseInt(key, 10) === preGenLoad) opt.selected = true;
-    select.options[select.options.length] = opt;
+    select.add(opt);
   }
 
   const container = document.getElementById('preGenContainer');
@@ -487,7 +523,7 @@ function createPreGenMenu() {
   goBtn.value = 'Go';
   goBtn.addEventListener('click', () => displayPicks(form().preGen));
   container.appendChild(goBtn);
-  container.style.display = 'inline';
+  container.style.display = 'flex';
 }
 
 function toggleAllSets() {
@@ -495,7 +531,8 @@ function toggleAllSets() {
     (el) => el.type === 'checkbox' && parseInt(el.value, 10) < 20
   );
   const label = document.getElementById('allCardsText');
-  if (label.innerHTML === 'Select&nbsp;All&nbsp;Sets') {
+  allSetsSelected = !allSetsSelected;
+  if (allSetsSelected) {
     checkboxes.forEach((cb) => { cb.checked = true; });
     label.innerHTML = 'Reset&nbsp;Set&nbsp;Selection';
   } else {
@@ -512,7 +549,8 @@ function toggleAllPromos() {
     return v >= 20 && v <= 30;
   });
   const label = document.getElementById('allPromoCardsText');
-  if (label.innerHTML === 'Select&nbsp;All&nbsp;Promo&nbsp;Cards') {
+  allPromosSelected = !allPromosSelected;
+  if (allPromosSelected) {
     checkboxes.forEach((cb) => { cb.checked = true; });
     label.innerHTML = 'Reset&nbsp;set&nbsp;selection';
   } else {
@@ -521,7 +559,44 @@ function toggleAllPromos() {
   }
 }
 
+function updateThemeToggle(theme) {
+  const btn = document.getElementById('themeToggle');
+  if (!btn) return;
+  btn.querySelector('.theme-icon').textContent = theme === 'dark' ? '☀' : '☾';
+  btn.querySelector('.theme-label').textContent = theme === 'dark' ? 'Light' : 'Dark';
+  btn.setAttribute('aria-label', theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+  // Theme: read persisted preference (inline script may have already set it, this syncs the button)
+  const savedTheme = localStorage.getItem('dominion-theme') ?? 'dark';
+  updateThemeToggle(savedTheme);
+  document.getElementById('themeToggle').addEventListener('click', () => {
+    const current = document.documentElement.getAttribute('data-theme') ?? 'dark';
+    const next = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('dominion-theme', next);
+    updateThemeToggle(next);
+  });
+
+  // Sidebar collapse (persisted)
+  const sidebarTrack = document.getElementById('sidebarTrack');
+  if (sidebarTrack) {
+    if (localStorage.getItem('dominion-sidebar-collapsed') === 'true') {
+      sidebarTrack.classList.add('collapsed');
+    }
+    document.getElementById('sidebarToggle').addEventListener('click', () => {
+      sidebarTrack.classList.toggle('collapsed');
+      localStorage.setItem('dominion-sidebar-collapsed', sidebarTrack.classList.contains('collapsed'));
+    });
+  }
+
+  // Disable Custom Set if card_data.js has no custom cards
+  if (!CARD_LIST.some((c) => c.set === 'custom')) {
+    const customCb = document.querySelector('input[name="custom"]');
+    if (customCb) customCb.disabled = true;
+  }
+
   createPreGenMenu();
   displayPicks();
   document.getElementById('newRandomBtn').addEventListener('click', () => displayPicks());

@@ -1,0 +1,617 @@
+/* ════════════════════════════════════════════════════
+   Dominion Card Picker — index.css
+   Theme: dark (default) | light  →  [data-theme="light"] on <html>
+   Sidebar: collapses left on desktop, collapses up on mobile
+   ════════════════════════════════════════════════════ */
+
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 20px; }
+
+/* ════════════════════════════════════════════════════
+   Theme Variables
+   ════════════════════════════════════════════════════ */
+
+/* Dark (default) */
+:root {
+  --bg:                #16162a;
+  --bg-surface:        #1f1f38;
+  --bg-elevated:       #28284a;
+  --bg-hover:          #31315a;
+  --text:              #e4e2f4;
+  --text-muted:        #8a88a8;
+  --accent:            #c9a86c;
+  --accent-hover:      #dfc08a;
+  --accent-text:       #16162a;
+  --border:            #34344e;
+  --input-bg:          #16162a;
+  --shadow-sm:         0 1px 4px rgba(0,0,0,.4);
+  --shadow:            0 4px 16px rgba(0,0,0,.55);
+  --shadow-card:       0 8px 28px rgba(0,0,0,.65);
+  --radius:            8px;
+  --radius-sm:         4px;
+  --radius-pill:       20px;
+  --transition:        160ms ease;
+  --sidebar-w:         296px;
+  --sidebar-strip:     28px;  /* collapsed width on desktop */
+  --toggle-h:          40px;  /* height of sidebar toggle bar */
+  --header-h:          54px;
+  --color-special:     #e87858;
+}
+
+/* Light (parchment) */
+[data-theme="light"] {
+  --bg:                #ede8d8;
+  --bg-surface:        #f6f2e6;
+  --bg-elevated:       #e8e2cc;
+  --bg-hover:          #ddd7c0;
+  --text:              #26200e;
+  --text-muted:        #6a5c3e;
+  --accent:            #7b3f00;
+  --accent-hover:      #9a5218;
+  --accent-text:       #f6f2e6;
+  --border:            #cec4a4;
+  --input-bg:          #f6f2e6;
+  --shadow-sm:         0 1px 4px rgba(0,0,0,.12);
+  --shadow:            0 4px 16px rgba(0,0,0,.16);
+  --shadow-card:       0 8px 28px rgba(0,0,0,.22);
+  --color-special:     #b83020;
+}
+
+/* Card set palette — same on both themes */
+:root {
+  --set-base:        #c0392b;
+  --set-intrigue:    #2471a3;
+  --set-seaside:     #c96820;
+  --set-alchemy:     #8032a0;
+  --set-prosperity:  #1a7a40;
+  --set-cornucopia:  #b89000;
+  --set-hinterlands: #518028;
+  --set-darkages:    #566070;
+  --set-guilds:      #788090;
+  --set-custom:      #484858;
+}
+
+/* ════════════════════════════════════════════════════
+   Base
+   ════════════════════════════════════════════════════ */
+body {
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  transition: background var(--transition), color var(--transition);
+}
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ════════════════════════════════════════════════════
+   Header
+   ════════════════════════════════════════════════════ */
+.site-header {
+  height: var(--header-h);
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  flex-shrink: 0;
+  transition: background var(--transition), border-color var(--transition);
+}
+.header-inner {
+  max-width: 1800px;
+  margin: 0 auto;
+  padding: 0 20px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.header-brand { display: flex; align-items: center; gap: 10px; }
+.brand-icon   { font-size: 1.25rem; color: var(--accent); line-height: 1; }
+h1 { font-size: 1.15rem; font-weight: 600; letter-spacing: .01em; }
+
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--text-muted);
+  font-size: .8rem;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.theme-toggle:hover { border-color: var(--accent); color: var(--accent); }
+.theme-icon { font-size: .95rem; line-height: 1; }
+
+/* ════════════════════════════════════════════════════
+   App layout  (flex; sidebar-track collapses)
+   ════════════════════════════════════════════════════ */
+.app-layout {
+  display: flex;
+  flex: 1;
+  align-items: stretch;
+  max-width: 1800px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* ════════════════════════════════════════════════════
+   Sidebar track — handles clipping + width transition
+   ════════════════════════════════════════════════════ */
+.sidebar-track {
+  flex-shrink: 0;
+  width: var(--sidebar-w);
+  overflow: hidden;                              /* clips sidebar during collapse */
+  border-right: 1px solid var(--border);
+  transition: width 260ms cubic-bezier(.4,0,.2,1),
+              border-color var(--transition);
+}
+.sidebar-track.collapsed {
+  width: var(--sidebar-strip);
+}
+
+/* ── Sidebar — sticky scroller inside the track ── */
+.sidebar {
+  width: var(--sidebar-w);                       /* fixed; gets clipped by track */
+  min-height: 100%;
+  background: var(--bg-surface);
+  position: sticky;
+  top: var(--header-h);
+  max-height: calc(100vh - var(--header-h));
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: background var(--transition);
+}
+.sidebar::-webkit-scrollbar { width: 3px; }
+.sidebar::-webkit-scrollbar-track { background: transparent; }
+.sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* ── Sidebar toggle button ── */
+.sidebar-toggle {
+  width: 100%;
+  height: var(--toggle-h);
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 10px 0 8px;
+  background: var(--bg-elevated);
+  border: none;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: .82rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  transition: background var(--transition), color var(--transition);
+}
+.sidebar-toggle:hover { background: var(--bg-hover); color: var(--text); }
+
+.sidebar-toggle-icon {
+  font-size: .9rem;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: transform 260ms cubic-bezier(.4,0,.2,1);
+}
+
+/* ════════════════════════════════════════════════════
+   Desktop collapse  (> 780px) — slides left
+   ════════════════════════════════════════════════════ */
+@media (min-width: 781px) {
+  .sidebar-toggle-label { display: none; }
+
+  /* ‹ default (collapse left) → rotates to › on collapse */
+  .sidebar-track.collapsed .sidebar-toggle-icon {
+    transform: rotate(180deg);
+  }
+}
+
+/* ════════════════════════════════════════════════════
+   Mobile collapse  (≤ 780px) — collapses up
+   ════════════════════════════════════════════════════ */
+@media (max-width: 780px) {
+  .app-layout { flex-direction: column; }
+
+  .sidebar-track {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    max-height: 2000px;                          /* large enough for any content */
+    overflow: hidden;
+    /* override desktop width transition with max-height */
+    transition: max-height 360ms cubic-bezier(.4,0,.2,1),
+                border-color var(--transition);
+  }
+  .sidebar-track.collapsed {
+    width: 100%;
+    max-height: var(--toggle-h);                 /* show only the toggle bar */
+  }
+
+  .sidebar {
+    width: 100%;
+    position: static;
+    max-height: none;
+    overflow-y: visible;
+  }
+
+  /* ‹ rotated to point UP (∧) — indicates will collapse upward */
+  .sidebar-toggle-icon { transform: rotate(-90deg); }
+  /* collapsed → points DOWN (∨) */
+  .sidebar-track.collapsed .sidebar-toggle-icon { transform: rotate(90deg); }
+}
+
+/* ════════════════════════════════════════════════════
+   Panels
+   ════════════════════════════════════════════════════ */
+.panel {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.panel--generate {
+  background: var(--bg-elevated);
+  border-top: 1px solid var(--border);
+}
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.panel-title {
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.panel > .panel-title { margin-bottom: 10px; }
+
+/* ════════════════════════════════════════════════════
+   Checkbox grid
+   ════════════════════════════════════════════════════ */
+.checkbox-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px 6px;
+}
+.checkbox-grid--promos { grid-template-columns: 1fr 1fr; }
+
+/* ── Check items ── */
+.check-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  font-size: .85rem;
+  cursor: pointer;
+  user-select: none;
+  transition: background var(--transition);
+}
+.check-item:hover { background: var(--bg-hover); }
+.check-item input[type="checkbox"] {
+  position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none;
+}
+.check-box {
+  width: 14px; height: 14px; min-width: 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 3px;
+  background: var(--input-bg);
+  position: relative;
+  transition: all var(--transition);
+  flex-shrink: 0;
+}
+.check-item input[type="checkbox"]:checked ~ .check-box {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.check-item input[type="checkbox"]:checked ~ .check-box::after {
+  content: '';
+  position: absolute;
+  left: 3px; top: 0;
+  width: 4px; height: 8px;
+  border: 1.5px solid var(--accent-text);
+  border-top: none; border-left: none;
+  transform: rotate(45deg);
+}
+.check-item input[type="checkbox"]:focus-visible ~ .check-box {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.check-item:has(input[type="checkbox"]:disabled) {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ── Select-all chip ── */
+.select-all-chip {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+}
+.select-all-chip input[type="checkbox"] {
+  position: absolute; opacity: 0; width: 0; height: 0;
+}
+.select-all-chip span {
+  font-size: .68rem;
+  font-weight: 600;
+  padding: 2px 9px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--text-muted);
+  transition: all var(--transition);
+}
+.select-all-chip:hover span { border-color: var(--accent); color: var(--accent); }
+
+/* ── Set color dots ── */
+.set-dot {
+  width: 7px; height: 7px; min-width: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.set-dot[data-set="base"]        { background: var(--set-base); }
+.set-dot[data-set="intrigue"]    { background: var(--set-intrigue); }
+.set-dot[data-set="seaside"]     { background: var(--set-seaside); }
+.set-dot[data-set="alchemy"]     { background: var(--set-alchemy); }
+.set-dot[data-set="prosperity"]  { background: var(--set-prosperity); }
+.set-dot[data-set="cornucopia"]  { background: var(--set-cornucopia); }
+.set-dot[data-set="hinterlands"] { background: var(--set-hinterlands); }
+.set-dot[data-set="darkages"]    { background: var(--set-darkages); }
+.set-dot[data-set="guilds"]      { background: var(--set-guilds); }
+.set-dot[data-set="custom"]      { background: var(--set-custom); }
+
+/* ════════════════════════════════════════════════════
+   Options
+   ════════════════════════════════════════════════════ */
+.option-group { margin-bottom: 14px; }
+.option-group:last-child { margin-bottom: 0; }
+.option-group-title {
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.force-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px 6px;
+}
+
+/* ════════════════════════════════════════════════════
+   Radio buttons
+   ════════════════════════════════════════════════════ */
+.radio-group { display: flex; gap: 2px; flex-wrap: wrap; }
+.radio-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  font-size: .85rem;
+  cursor: pointer;
+  user-select: none;
+  transition: background var(--transition);
+}
+.radio-item:hover { background: var(--bg-hover); }
+.radio-item input[type="radio"] {
+  position: absolute; opacity: 0; width: 0; height: 0;
+}
+.radio-dot {
+  width: 13px; height: 13px; min-width: 13px;
+  border: 1.5px solid var(--border);
+  border-radius: 50%;
+  background: var(--input-bg);
+  position: relative;
+  flex-shrink: 0;
+  transition: border-color var(--transition);
+}
+.radio-item input[type="radio"]:checked ~ .radio-dot { border-color: var(--accent); }
+.radio-item input[type="radio"]:checked ~ .radio-dot::after {
+  content: '';
+  position: absolute;
+  left: 50%; top: 50%;
+  transform: translate(-50%,-50%);
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+/* ════════════════════════════════════════════════════
+   Generate controls
+   ════════════════════════════════════════════════════ */
+.generate-controls { display: flex; gap: 12px; margin-bottom: 14px; }
+.generate-count, .sort-controls { flex: 1; }
+.field-label {
+  display: block;
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+select {
+  width: 100%;
+  appearance: none;
+  background: var(--input-bg)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23888'/%3E%3C/svg%3E")
+    no-repeat right 10px center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  padding: 6px 28px 6px 10px;
+  font-size: .85rem;
+  cursor: pointer;
+  transition: border-color var(--transition);
+}
+select:hover, select:focus { border-color: var(--accent); outline: none; }
+
+.btn-generate {
+  width: 100%;
+  padding: 11px;
+  background: var(--accent);
+  color: var(--accent-text);
+  border: none;
+  border-radius: var(--radius);
+  font-size: .95rem;
+  font-weight: 700;
+  letter-spacing: .02em;
+  cursor: pointer;
+  transition: background var(--transition), transform var(--transition);
+}
+.btn-generate:hover { background: var(--accent-hover); transform: translateY(-1px); }
+.btn-generate:active { transform: none; }
+
+/* ── Pre-gen ── */
+.pregen-container {
+  flex-direction: column;
+  gap: 8px;
+}
+.pregen-container input[type="button"] {
+  align-self: flex-start;
+  padding: 6px 16px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: .85rem;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.pregen-container input[type="button"]:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ════════════════════════════════════════════════════
+   Output area
+   ════════════════════════════════════════════════════ */
+.output-area {
+  flex: 1;
+  min-width: 0;
+  padding: 24px 28px;
+}
+
+.game-type-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+  min-height: 38px;
+}
+.game-type-label {
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.game-type-badge {
+  font-size: .9rem;
+  font-weight: 700;
+  padding: 3px 14px;
+  border-radius: var(--radius-pill);
+  transition: all var(--transition);
+}
+.game-type-badge:empty { display: none; }
+.game-type-badge.regular {
+  background: var(--bg-elevated);
+  color: var(--text);
+}
+.game-type-badge.red {
+  background: color-mix(in srgb, var(--color-special) 14%, transparent);
+  color: var(--color-special);
+  border: 1px solid color-mix(in srgb, var(--color-special) 30%, transparent);
+}
+
+/* ════════════════════════════════════════════════════
+   Card grid
+   ════════════════════════════════════════════════════ */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 150px);
+  gap: 8px;
+  margin-bottom: 24px;
+  max-width: 782px; /* 5 × 150px + 4 × 8px gap */
+}
+.card-cell {
+  width: 150px;
+  height: 232px;
+  border-radius: 6px;
+  overflow: hidden;
+  position: relative;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+  cursor: default;
+}
+.card-cell:hover {
+  transform: translateY(-6px);
+  box-shadow: var(--shadow-card);
+  z-index: 2;
+}
+.card-cell img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.card-cell.custom {
+  display: flex;
+  align-items: flex-start;
+  padding: 10px;
+  font-size: .8rem;
+  line-height: 1.5;
+  color: #fff;
+  background-size: cover;
+  background-position: center;
+}
+
+.set-base        { background-color: var(--set-base); }
+.set-intrigue    { background-color: var(--set-intrigue); }
+.set-seaside     { background-color: var(--set-seaside); }
+.set-alchemy     { background-color: var(--set-alchemy); }
+.set-prosperity  { background-color: var(--set-prosperity); }
+.set-cornucopia  { background-color: var(--set-cornucopia); }
+.set-hinterlands { background-color: var(--set-hinterlands); }
+.set-darkages    { background-color: var(--set-darkages); }
+.set-guilds      { background-color: var(--set-guilds); }
+.set-custom      { background-color: var(--set-custom); }
+
+/* ── Bane pile ── */
+.bane-section { margin-top: 4px; }
+.bane-label {
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+.bane-card { display: inline-block; }
+
+/* ════════════════════════════════════════════════════
+   Footer
+   ════════════════════════════════════════════════════ */
+.site-footer {
+  border-top: 1px solid var(--border);
+  padding: 18px 24px;
+  font-size: .72rem;
+  color: var(--text-muted);
+  text-align: center;
+  line-height: 1.8;
+  flex-shrink: 0;
+}
+
+/* ════════════════════════════════════════════════════
+   Mid-width adjustment  (1024px)
+   ════════════════════════════════════════════════════ */
+@media (max-width: 1024px) {
+  :root { --sidebar-w: 264px; }
+}

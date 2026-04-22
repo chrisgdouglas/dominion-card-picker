@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dominion Card Picker</title>
+  <!-- Runs before CSS to prevent flash of wrong theme -->
+  <script>
+    (function () {
+      const t = localStorage.getItem('dominion-theme');
+      if (t) document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
+  <link rel="stylesheet" href="css/index.css" />
+  <script src="js/card_data.js"></script>
+  <script type="module" src="js/dominion_picker.js"></script>
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="header-brand">
+        <span class="brand-icon" aria-hidden="true">♛</span>
+        <h1>Dominion Card Picker</h1>
+      </div>
+      <button id="themeToggle" class="theme-toggle" type="button" aria-label="Switch to light mode">
+        <span class="theme-icon">☀</span>
+        <span class="theme-label">Light</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="app-layout">
+
+    <!-- ── Sidebar ── -->
+    <div class="sidebar-track" id="sidebarTrack">
+    <aside class="sidebar" id="sidebar">
+      <button class="sidebar-toggle" id="sidebarToggle" type="button" aria-label="Toggle controls panel">
+        <span class="sidebar-toggle-icon" aria-hidden="true">‹</span>
+        <span class="sidebar-toggle-label">Controls</span>
+      </button>
+      <form name="controlForm" novalidate>
+
+        <!-- Card Sets -->
+        <section class="panel">
+          <div class="panel-header">
+            <h2 class="panel-title">Card Sets</h2>
+            <label class="select-all-chip">
+              <input type="checkbox" id="allSetsToggle" value="31" name="allSets" />
+              <span id="allCardsText">Select All</span>
+            </label>
+          </div>
+          <div class="checkbox-grid">
+            <label class="check-item">
+              <input type="checkbox" name="base" value="1" checked />
+              <span class="check-box"></span>
+              <span class="set-dot" data-set="base"></span>Base Set
+            </label>
+            <label class="check-item">
+              <input type="checkbox" name="intrigue" value="2" />
+              <span class="check-box"></span>
+              <span class="set-dot" data-set="intrigue"></span>Intrigue
+            </label>
+            <label class="check-item">
+              <input type="checkbox" name="seaside" value="3" />
+              <span class="check-box"></span>
+              <span class="set-dot" data-set="seaside"></span>Seaside
+            </label>
+            <label class="check-item">
+              <input type="checkbox" name="alchemy" value="4" />
+              <span class="check-box"></span>
+              <span class="set-dot" data-set="alchemy"></span>Alchemy
+            </label>
+            <label class="check-item">
+              <input type="checkbox" name="prosperity" value="5" />
+              <span class="check-box"></span>
+              <span class="set-dot" data-set="prosperity"></span>Prosperity
+            </label>
+            <label class="check-item">
+              <input type="checkbox" name="cornucopia" value="6" />
+              <span class="check-box"></span>
+              <span class="set-dot" data-set="cornucopia"></span>Cornucopia
+            </label>
+            <label class="check-item">
+              <input type="checkbox" name="hinterlands" value="7" />
+              <span class="check-box"></span>
+              <span class="set-dot" data-set="hinterlands"></span>Hinterlands
+            </label>
+            <label class="check-item">
+              <input type="checkbox" name="darkages" value="8" />
+              <span class="check-box"></span>
+              <span class="set-dot" data-set="darkages"></span>Dark Ages
+            </label>
+            <label class="check-item">
+              <input type="checkbox" name="guilds" value="9" />
+              <span class="check-box"></span>
+              <span class="set-dot" data-set="guilds"></span>Guilds
+            </label>
+            <label class="check-item">
+              <input type="checkbox" name="custom" value="10" />
+              <span class="check-box"></span>
+              <span class="set-dot" data-set="custom"></span>Custom
+            </label>
+          </div>
+        </section>
+
+        <!-- Promo Cards -->
+        <section class="panel">
+          <div class="panel-header">
+            <h2 class="panel-title">Promo Cards</h2>
+            <label class="select-all-chip">
+              <input type="checkbox" id="allPromosToggle" value="32" name="allSets" />
+              <span id="allPromoCardsText">Select All</span>
+            </label>
+          </div>
+          <div class="checkbox-grid checkbox-grid--promos">
+            <label class="check-item">
+              <input type="checkbox" name="envoy" value="20" />
+              <span class="check-box"></span>Envoy
+            </label>
+            <label class="check-item">
+              <input type="checkbox" name="blackMarket" value="21" />
+              <span class="check-box"></span>Black Market
+            </label>
+            <label class="check-item">
+              <input type="checkbox" name="stash" value="22" />
+              <span class="check-box"></span>Stash
+            </label>
+            <label class="check-item">
+              <input type="checkbox" name="walledvillage" value="23" />
+              <span class="check-box"></span>Walled Village
+            </label>
+            <label class="check-item">
+              <input type="checkbox" name="governor" value="24" />
+              <span class="check-box"></span>Governor
+            </label>
+          </div>
+        </section>
+
+        <!-- Options -->
+        <section class="panel">
+          <h2 class="panel-title">Options</h2>
+
+          <div class="option-group">
+            <h3 class="option-group-title">Attack Balance</h3>
+            <label class="check-item">
+              <input type="checkbox" name="attackBalance" value="35" />
+              <span class="check-box"></span>
+              Include a Reaction card
+            </label>
+            <label class="check-item" title="Picks the reaction card that best counters the selected attack cards.">
+              <input type="checkbox" name="smartAttackBalance" value="36" />
+              <span class="check-box"></span>
+              Smart Reaction Cards
+            </label>
+            <label class="check-item">
+              <input type="checkbox" name="noAttack" value="40" />
+              <span class="check-box"></span>
+              No Attack Cards
+            </label>
+          </div>
+
+          <div class="option-group">
+            <h3 class="option-group-title">Alchemy Rule</h3>
+            <label class="check-item" title="Applies the recommended 3–5 Alchemy card rule when Alchemy is selected.">
+              <input type="checkbox" name="randomAlchemy" value="32" />
+              <span class="check-box"></span>
+              3–5 Alchemy cards
+            </label>
+          </div>
+
+          <div class="option-group">
+            <h3 class="option-group-title">Force at Least One Card With</h3>
+            <div class="force-grid">
+              <label class="check-item" title="Forces at least 1 card that grants +2 or more Actions.">
+                <input type="checkbox" name="mustActions" value="50" />
+                <span class="check-box"></span>+2 Actions
+              </label>
+              <label class="check-item" title="Forces at least 1 card that grants +2 or more Cards.">
+                <input type="checkbox" name="mustCards" value="51" />
+                <span class="check-box"></span>+2 Cards
+              </label>
+              <label class="check-item" title="Forces at least 1 card that grants +1 or more Buys.">
+                <input type="checkbox" name="mustBuys" value="52" />
+                <span class="check-box"></span>+1 Buy
+              </label>
+              <label class="check-item" title="Forces at least 1 card that grants +2 or more Coppers.">
+                <input type="checkbox" name="mustCoppers" value="53" />
+                <span class="check-box"></span>+2 Coppers
+              </label>
+            </div>
+          </div>
+        </section>
+
+        <!-- Generate -->
+        <section class="panel panel--generate">
+          <div class="generate-controls">
+            <div class="generate-count">
+              <label class="field-label" for="numberOfCards">Kingdom Size</label>
+              <select name="numberOfCards" id="numberOfCards">
+                <option value="10" selected>10 cards</option>
+                <option value="11">11 cards</option>
+                <option value="12">12 cards</option>
+                <option value="13">13 cards</option>
+                <option value="14">14 cards</option>
+                <option value="15">15 cards</option>
+              </select>
+            </div>
+            <div class="sort-controls">
+              <span class="field-label">Sort By</span>
+              <div class="radio-group">
+                <label class="radio-item">
+                  <input type="radio" name="sortOption" value="0" checked />
+                  <span class="radio-dot"></span>Name
+                </label>
+                <label class="radio-item">
+                  <input type="radio" name="sortOption" value="1" />
+                  <span class="radio-dot"></span>Cost
+                </label>
+                <label class="radio-item">
+                  <input type="radio" name="sortOption" value="2" />
+                  <span class="radio-dot"></span>Set
+                </label>
+              </div>
+            </div>
+          </div>
+          <button type="button" id="newRandomBtn" class="btn-generate">
+            New Random Kingdom
+          </button>
+        </section>
+
+        <!-- Pre-generated Sets -->
+        <section class="panel">
+          <h2 class="panel-title">Pre-generated Sets</h2>
+          <div id="preGenContainer" class="pregen-container" style="display:none"></div>
+        </section>
+
+      </form>
+    </aside>
+    </div><!-- /sidebar-track -->
+
+    <!-- ── Output ── -->
+    <main class="output-area">
+      <div class="game-type-bar">
+        <span class="game-type-label">Game Type</span>
+        <span id="gameType" class="game-type-badge regular"></span>
+      </div>
+      <div id="content"></div>
+    </main>
+
+  </div>
+
+  <footer class="site-footer">
+    <p>
+      Written by <a href="http://www.chrisdouglas.ca/games/dominion/" target="_blank" rel="noopener">Chris Douglas</a>,
+      inspired by <a href="http://www.hiwiller.com/dominion/" target="_blank" rel="noopener">Zack Hiwiller's Dominion Card Randomizer</a>.<br />
+      Dominion created by Donald X. Vaccarino, published by
+      <a href="http://www.riograndegames.com/games.html?id=278" target="_blank" rel="noopener">Rio Grande Games</a>.
+      Card images from <a href="http://www.boardgamegeek.com/boardgame/36218/dominion" target="_blank" rel="noopener">BoardGameGeek</a>.
+      This tool is not affiliated with or endorsed by Rio Grande Games.
+    </p>
+  </footer>
+
+</body>
+</html>
