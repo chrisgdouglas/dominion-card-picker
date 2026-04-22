@@ -568,7 +568,11 @@ function makeCardCell(cardObj) {
     div.classList.add('custom');
     div.style.backgroundImage = `url(${imgSrc})`;
     const span = document.createElement('span');
-    span.innerHTML = `${cardObj.name}<br />Cost: ${cardObj.cost}<br />Type: ${cardObj.type}`;
+    span.appendChild(document.createTextNode(cardObj.name));
+    span.appendChild(document.createElement('br'));
+    span.appendChild(document.createTextNode(`Cost: ${cardObj.cost}`));
+    span.appendChild(document.createElement('br'));
+    span.appendChild(document.createTextNode(`Type: ${cardObj.type}`));
     div.appendChild(span);
   } else {
     const img = new Image(148, 228);
