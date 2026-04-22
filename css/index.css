@@ -218,6 +218,8 @@ h1 { font-size: 1.15rem; font-weight: 600; letter-spacing: .01em; }
 
 /* ════════════════════════════════════════════════════
    Mobile collapse  (≤ 780px) — collapses up
+   Collapse is applied to the form (not the track) so the
+   sticky toggle button remains visible during page scroll.
    ════════════════════════════════════════════════════ */
 @media (max-width: 780px) {
   .app-layout { flex-direction: column; }
@@ -226,15 +228,13 @@ h1 { font-size: 1.15rem; font-weight: 600; letter-spacing: .01em; }
     width: 100%;
     border-right: none;
     border-bottom: 1px solid var(--border);
-    max-height: 2000px;                          /* large enough for any content */
-    overflow: hidden;
-    /* override desktop width transition with max-height */
-    transition: max-height 360ms cubic-bezier(.4,0,.2,1),
-                border-color var(--transition);
+    /* CRITICAL: override desktop's overflow:hidden. A non-scrolling
+       overflow:hidden ancestor traps position:sticky descendants. */
+    overflow: visible;
+    transition: border-color var(--transition);
   }
   .sidebar-track.collapsed {
     width: 100%;
-    max-height: var(--toggle-h);                 /* show only the toggle bar */
   }
 
   .sidebar {
@@ -242,6 +242,31 @@ h1 { font-size: 1.15rem; font-weight: 600; letter-spacing: .01em; }
     position: static;
     max-height: none;
     overflow-y: visible;
+    overflow-x: visible;
+    display: block;                              /* break flex so sticky works */
+    min-height: 0;
+  }
+
+  /* Toggle sticks to viewport top while user scrolls controls */
+  .sidebar-toggle {
+    position: sticky;
+    top: var(--header-h);
+    z-index: 20;
+    box-shadow: 0 2px 6px rgba(0,0,0,.35);
+  }
+
+  /* Form collapses instead of the track.
+     No overflow:hidden here — it would create a new sticky scroll
+     context and trap the toggle.  Collapse via transform+max-height
+     with overflow:clip (which, unlike hidden, does NOT create a
+     scroll container so sticky escapes to the viewport). */
+  .sidebar-track form[name="controlForm"] {
+    overflow: clip;
+    max-height: 4000px;
+    transition: max-height 400ms cubic-bezier(.4,0,.2,1);
+  }
+  .sidebar-track.collapsed form[name="controlForm"] {
+    max-height: 0;
   }
 
   /* ‹ rotated to point UP (∧) — indicates will collapse upward */
