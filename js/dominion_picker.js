@@ -4,11 +4,13 @@
 
 const { cards, preGenSets } = window;
 
+/** @type {string[]} Main expansion sets (load order) */
 const CARD_SETS = [
   'base', 'intrigue', 'seaside', 'alchemy', 'prosperity',
   'cornucopia', 'hinterlands', 'darkages', 'guilds',
 ];
 
+/** @type {Object<string, string>} Promo card ID→name mapping */
 const PROMO_NAMES = {
   envoy: 'Envoy',
   blackMarket: 'Black Market',
@@ -17,8 +19,10 @@ const PROMO_NAMES = {
   governor: 'Governor',
 };
 
+/** @type {string[]} Sets containing Reaction cards for attack balance */
 const REACTION_SETS = ['base', 'intrigue', 'prosperity', 'cornucopia', 'hinterlands', 'darkages'];
 
+/** Attack→reaction card mappings for smartAttackBalance */
 const SMART_REACTIONS = {
   prosperity: {
     cards: ['Watchtower'],
@@ -29,20 +33,25 @@ const SMART_REACTIONS = {
   },
 };
 
+/** Dark Ages Reaction: triggers both Tunnel and Beggar */
 const HINTERLANDS_BOTH = new Set([
   'Torturer', 'Sea Hag', 'Familiar', 'Mountebank', 'Jester', 'Tournament', 'Noble Brigand',
 ]);
+/** Dark Ages Reaction: triggers Tunnel only */
 const HINTERLANDS_TUNNEL_ONLY = new Set([
   'Witch', 'Saboteur', 'Swindler', 'Ambassador', 'Scrying Pool',
   'Young Witch', 'Oracle', 'Pillage',
 ]);
+/** Dark Ages Reaction: triggers Beggar */
 const DARKAGES_BEGGAR = new Set([
   'Militia', 'Spy', 'Thief', 'Minion', 'Saboteur', 'Pirate ship', 'Sea Hag',
   'Scrying Pool', 'Rabble', 'Jester', 'Margrave', 'Noble Brigand',
   'Oracle', 'Rogue', 'Taxman',
 ]);
+/** Dark Ages Reaction: triggers Market Square */
 const DARKAGES_MARKET_SQUARE = new Set(['Saboteur', 'Swindler', 'Noble Brigand', 'Rogue']);
 
+/** Game variant labels keyed by detected presence of Prosperity/Dark Ages/Looter */
 const GAME_TYPE_LABELS = {
   prosperity: 'Colony',
   darkages: 'Shelter',
@@ -54,29 +63,35 @@ const GAME_TYPE_LABELS = {
   prosperitydarkageslooter: 'Colony & Shelter & Looter',
 };
 
+/** Guard against infinite pick loops in pickCards() */
 const MAX_PICK_ATTEMPTS = 1000;
 
-// Pre-built lookups — card_data.js is static, these never change.
+/** Pre-built lookups — card_data.js is static, these never change */
 const CARD_LIST = Object.values(cards);
+/** @type {Map<string, number>} Card name→ID for O(1) lookups */
 const CARD_BY_NAME = new Map(CARD_LIST.map((c) => [c.name, c.id]));
 
-// Memoizes determineSets() by checkbox-state signature.
+/** Memoizes determineSets() result by checkbox-state signature */
 const previousRun = { choice: '', storedSet: [] };
 
-// Alchemy sub-pool cache. Invalidated when the noAttack checkbox changes.
+/** Alchemy sub-pool cache; invalidated when noAttack checkbox changes */
 let alchemySet = [];
 let alchemySetNoAttack = null;
 
-// Toggle state for the "Select All" checkboxes — avoids reading state from DOM text.
+/** Toggle state for "Select All" checkboxes (avoids DOM re-reads) */
 let allSetsSelected = false;
 let allPromosSelected = false;
 
-// queryStringConsumed prevents re-applying the URL pre-gen on subsequent random picks.
+/** Prevents re-applying URL pre-gen on subsequent "New Random" clicks */
 let queryStringConsumed = false;
 
 const form = () => document.forms.controlForm;
 const randomChoice = (arr) => arr[Math.floor(Math.random() * arr.length)];
 const unique = (arr) => [...new Set(arr)];
+
+// ─────────────────────────────────────────────────────────────────
+// Card predicates (card ID → boolean)
+// ─────────────────────────────────────────────────────────────────
 
 const isYoungWitch = (id) => cards[id].name === 'Young Witch';
 const isAttack = (id) => cards[id].type === 'Attack';
@@ -89,10 +104,20 @@ const hasCopper = (id) => cards[id].subType.includes('copper');
 const isProsperity = (id) => cards[id].set === 'prosperity';
 const isDarkages = (id) => cards[id].set === 'darkages';
 
+/**
+ * Lookup card ID by name.
+ * @param {string} name - Card name to search for
+ * @returns {number|null} Card ID or null if not found
+ */
 function getCardId(name) {
   return CARD_BY_NAME.get(name) ?? null;
 }
 
+/**
+ * Find card IDs matching a partial name (case-insensitive).
+ * @param {string} name - Substring to search for
+ * @returns {number[]} Array of matching card IDs
+ */
 function searchCards(name) {
   const lower = name.toLowerCase();
   return CARD_LIST
@@ -100,16 +125,30 @@ function searchCards(name) {
     .map((c) => c.id);
 }
 
-// Returns the checked radio's value, or '0' as a default sentinel.
+/**
+ * Get the value of the checked radio button from a radio group.
+ * @param {NodeList|HTMLInputElement[]} radioList - Radio input elements
+ * @returns {string} Checked value or '0' (default sentinel)
+ */
 function selRadio(radioList) {
   const checked = [...radioList].find((r) => r.checked);
   return checked ? checked.value : '0';
 }
 
+// ─────────────────────────────────────────────────────────────────
+// Card sorting comparators
+// ─────────────────────────────────────────────────────────────────
+
 const compareCardName = (a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase());
 const compareCardCost = (a, b) => a.cost - b.cost;
 const compareCardSet = (a, b) => a.set.localeCompare(b.set);
 
+/**
+ * Sort card IDs by name, cost, or set.
+ * @param {number[]} ids - Card IDs to sort
+ * @param {string} sortType - '0'=name, '1'=cost, '2'=set (default: name)
+ * @returns {number[]} Sorted card IDs
+ */
 function sortCards(ids, sortType) {
   const sorter = { '0': compareCardName, '1': compareCardCost, '2': compareCardSet }[sortType] ?? compareCardName;
   return ids
@@ -118,8 +157,12 @@ function sortCards(ids, sortType) {
     .map((c) => c.id);
 }
 
-// Returns true when no other major sets are checked alongside setID, used to
-// force variant rules. guilds is included so Prosperity+Guilds doesn't force Colony.
+/**
+ * Checks if a major expansion set is the only one of its "conflict group" selected.
+ * Guilds is always included to prevent Prosperity+Guilds from forcing Colony rule.
+ * @param {string} setID - Set name ('prosperity', 'darkages', 'alchemy')
+ * @returns {boolean} True if no conflicting sets are checked
+ */
 function noneChecked(setID) {
   const f = form();
   const others = {
@@ -131,6 +174,11 @@ function noneChecked(setID) {
   return !others.some((s) => f[s].checked);
 }
 
+/**
+ * Validates form selections and auto-corrects incompatible option combinations.
+ * Shows alerts/confirms for invalid states; modifies form state.
+ * @returns {boolean} True if validation passed; false if user cancelled or invalid
+ */
 function checkForm() {
   const f = form();
   if (!CARD_SETS.some((s) => f[s].checked)) {
@@ -171,6 +219,11 @@ function checkForm() {
   return true;
 }
 
+/**
+ * Gathers all eligible card IDs based on checked sets and options.
+ * Memoizes result by checkbox-state signature for performance.
+ * @returns {number[]} Array of eligible card IDs
+ */
 function determineSets() {
   const f = form();
   const noAttack = f.noAttack.checked;
@@ -208,6 +261,10 @@ function determineSets() {
   return [...result];
 }
 
+/**
+ * Build the alchemy card sub-pool (optionally excluding Attack cards).
+ * @returns {number[]} Array of alchemy card IDs
+ */
 function getAlchemySet() {
   const f = form();
   return CARD_LIST
@@ -215,7 +272,10 @@ function getAlchemySet() {
     .map((c) => c.id);
 }
 
-// Returns the alchemy sub-pool, rebuilding if noAttack state has changed since last call.
+/**
+ * Get cached alchemy sub-pool, invalidating if noAttack state changes.
+ * @returns {number[]} Array of alchemy card IDs
+ */
 function getOrRefreshAlchemySet() {
   const noAttack = form().noAttack.checked;
   if (alchemySet.length === 0 || alchemySetNoAttack !== noAttack) {
@@ -225,7 +285,13 @@ function getOrRefreshAlchemySet() {
   return alchemySet;
 }
 
-// Picks `count` unique random IDs from `pool`. Throws if pool is too small.
+/**
+ * Pick `count` unique random IDs from `pool`.
+ * @param {number[]} pool - Array of card IDs to pick from
+ * @param {number} count - Number of unique cards to pick
+ * @returns {number[]} Array of picked card IDs
+ * @throws {Error} If pool size < count
+ */
 function genCards(pool, count) {
   if (count > pool.length) {
     throw new Error(`Cannot pick ${count} unique cards from pool of ${pool.length}.`);
@@ -237,6 +303,13 @@ function genCards(pool, count) {
   return [...picked];
 }
 
+/**
+ * Pick a mixed kingdom with 3-5 Alchemy cards (per expansion rule) plus others.
+ * Retries until all duplicates are eliminated and count matches requested total.
+ * @param {number[]} selectedSets - All eligible cards from form
+ * @param {number} total - Desired kingdom size
+ * @returns {number[]} Array of unique card IDs (may be short if retries exhausted)
+ */
 function pickAlchemyMix(selectedSets, total) {
   const alchPool = getOrRefreshAlchemySet();
   // alchCount fixed before the retry loop so each attempt uses the same proportion.
@@ -254,6 +327,10 @@ function pickAlchemyMix(selectedSets, total) {
   return mix;
 }
 
+/**
+ * Build the reaction card pool from checked sets.
+ * @returns {number[]} Array of reaction card IDs available for attack balance
+ */
 function addReactionCards() {
   const f = form();
   const list = CARD_LIST
@@ -267,6 +344,12 @@ function addReactionCards() {
   return list;
 }
 
+/**
+ * Smart attack balance: for each unique attack name in the kingdom, suggest
+ * reaction cards that thematically counter that attack (e.g., Watchtower vs Witch).
+ * @param {number[]} selectedCards - Kingdom cards to analyze for attacks
+ * @returns {number[]} Array of suggested reaction card IDs (deduplicated)
+ */
 function smartAttackBalance(selectedCards) {
   const f = form();
   const result = [];
@@ -298,6 +381,11 @@ function smartAttackBalance(selectedCards) {
   return unique(result.filter((id) => id !== null));
 }
 
+/**
+ * Verify all enabled "Force at least one card with X" constraints are satisfied.
+ * @param {number[]} genSet - Generated card IDs
+ * @returns {boolean} True if all active constraints pass
+ */
 function checkSetOptions(genSet) {
   const f = form();
   const checks = [
@@ -309,11 +397,23 @@ function checkSetOptions(genSet) {
   return checks.every(([enabled, fn]) => !enabled || genSet.some(fn));
 }
 
+/**
+ * Check if any "Force at least..." constraint is enabled.
+ * @returns {boolean} True if at least one option is active
+ */
 function hasCardOptions() {
   const f = form();
   return f.mustActions.checked || f.mustCards.checked || f.mustBuys.checked || f.mustCoppers.checked;
 }
 
+/**
+ * Inject reaction card into picked set. Prefers unconstrained slot if optionsMode;
+ * falls back to replacing last card.
+ * @param {number[]} picked - Picked card IDs (mutated)
+ * @param {number} reactionId - Reaction card ID to inject
+ * @param {boolean} optionsMode - If true, try to replace unconstrained card first
+ * @returns {number[]} Modified picked array
+ */
 function injectReaction(picked, reactionId, optionsMode) {
   if (optionsMode) {
     const idx = picked.findIndex((id) => cards[id].subType === '' && cards[id].type !== 'Attack');
@@ -328,7 +428,13 @@ function injectReaction(picked, reactionId, optionsMode) {
   return picked;
 }
 
-// Pre-filters eligible bane candidates so the selection loop always terminates.
+/**
+ * Pick a valid bane card for Young Witch. Pre-filters eligible candidates
+ * (cost 2-3, non-potion) to ensure the selection always terminates.
+ * @param {number[]} selectedSets - Pool of eligible card IDs
+ * @returns {number} Bane card ID
+ * @throws {Error} If no eligible bane cards exist in the pool
+ */
 function pickBaneCard(selectedSets) {
   const eligible = selectedSets.filter((id) => {
     const c = cards[id];
@@ -340,6 +446,16 @@ function pickBaneCard(selectedSets) {
   return randomChoice(eligible);
 }
 
+/**
+ * Main card-picking orchestrator. Applies all constraints and options:
+ * - Random Alchemy mix (if enabled)
+ * - "Force at least X" constraints (retry loop)
+ * - Attack balance (random or smart)
+ * - Sorting preference
+ * - Young Witch + bane card (if present)
+ * @param {number} numberOfCards - Kingdom size (10-15)
+ * @returns {number[]} Final selected and sorted card IDs
+ */
 function pickCards(numberOfCards) {
   const f = form();
   const selectedSets = determineSets();
@@ -380,17 +496,33 @@ function pickCards(numberOfCards) {
   return picked;
 }
 
+/**
+ * Load a pre-generated card set by ID.
+ * @param {string} selVal - Pre-gen set ID
+ * @returns {number[]} Card IDs from the pre-gen set (11th card is bane for Young Witch)
+ */
 function preGenCards(selVal) {
   const pointer = parseInt(selVal, 10);
   const set = preGenSets[pointer] ?? preGenSets[1];
   return set.preGenSet;
 }
 
+/**
+ * Probabilistic game-type detection: draw a random card and check its set.
+ * @param {number[]} finalCards - Kingdom cards
+ * @param {string} chosenSet - Set to test for ('prosperity' | 'darkages')
+ * @returns {string} Set name if match, else empty string
+ */
 function pickGameType(finalCards, chosenSet) {
   const id = randomChoice(finalCards);
   return cards[id].set === chosenSet ? chosenSet : '';
 }
 
+/**
+ * Detect game variant (Colony/Shelter/Looter rules) from the final kingdom.
+ * @param {number[]} finalCards - Generated kingdom card IDs
+ * @returns {string} Game type label (e.g., 'Colony & Shelter & Looter')
+ */
 function gameType(finalCards) {
   let result = 'regular';
   const hasProsperity = finalCards.some(isProsperity);
@@ -411,6 +543,9 @@ function gameType(finalCards) {
   return GAME_TYPE_LABELS[result] ?? 'Regular';
 }
 
+/**
+ * Remove previously rendered card tables from the DOM.
+ */
 function clearTable() {
   const content = document.getElementById('content');
   content.style.display = 'none';
@@ -418,6 +553,11 @@ function clearTable() {
   document.getElementById('banePile')?.remove();
 }
 
+/**
+ * Create a single card cell (div with image, or custom card with text overlay).
+ * @param {Object} cardObj - Card object from card_data.js
+ * @returns {HTMLDivElement} Rendered card cell
+ */
 function makeCardCell(cardObj) {
   const div = document.createElement('div');
   div.className = `card-cell set-${cardObj.set}`;
@@ -440,6 +580,13 @@ function makeCardCell(cardObj) {
   return div;
 }
 
+/**
+ * Render the main kingdom card grid.
+ * @param {number[]} finalCards - Selected card IDs
+ * @param {number} generateNumber - Expected kingdom size (for Young Witch handling)
+ * @param {number} cardLoopCounter - Number of cards to render (excludes bane)
+ * @returns {HTMLDivElement} Grid container
+ */
 function makeTable(finalCards, generateNumber, cardLoopCounter) {
   const grid = document.createElement('div');
   grid.id = 'cardDisplay';
@@ -450,6 +597,12 @@ function makeTable(finalCards, generateNumber, cardLoopCounter) {
   return grid;
 }
 
+/**
+ * Render the Young Witch bane pile (separate visual section).
+ * @param {number[]} finalCards - Selected card IDs (last one is the bane)
+ * @param {number} baneIndex - Index of the bane card in finalCards
+ * @returns {HTMLDivElement} Bane section container
+ */
 function ywTable(finalCards, baneIndex) {
   const section = document.createElement('div');
   section.id = 'banePile';
@@ -465,6 +618,14 @@ function ywTable(finalCards, baneIndex) {
   return section;
 }
 
+/**
+ * Main orchestrator: validates form, generates or loads cards, renders output.
+ * Handles three input modes:
+ * 1. URL querystring pre-gen (runs once on page load)
+ * 2. Dropdown pre-gen selection
+ * 3. Random generation from form options
+ * @param {Object} [selObj] - Pre-gen select element (optional)
+ */
 function displayPicks(selObj) {
   const f = form();
   const gameTypeElement = document.getElementById('gameType');
@@ -502,6 +663,10 @@ function displayPicks(selObj) {
   content.style.display = 'block';
 }
 
+/**
+ * Build and inject the pre-generated set dropdown selector.
+ * Auto-selects a set from URL querystring if present on page load.
+ */
 function createPreGenMenu() {
   const preGenLoad = location.search ? parseInt(location.search.substring(1), 10) : 0;
   const select = document.createElement('select');
@@ -526,6 +691,10 @@ function createPreGenMenu() {
   container.style.display = 'flex';
 }
 
+/**
+ * Toggle "Select All Sets" state. Defaults to Base Set when unchecking all.
+ * Unchecks incompatible options like Random Alchemy.
+ */
 function toggleAllSets() {
   const checkboxes = [...form().elements].filter(
     (el) => el.type === 'checkbox' && parseInt(el.value, 10) < 20
@@ -542,6 +711,9 @@ function toggleAllSets() {
   }
 }
 
+/**
+ * Toggle "Select All Promo Cards" state.
+ */
 function toggleAllPromos() {
   const checkboxes = [...form().elements].filter((el) => {
     if (el.type !== 'checkbox') return false;
@@ -559,6 +731,10 @@ function toggleAllPromos() {
   }
 }
 
+/**
+ * Update theme toggle button icon and label to match current theme.
+ * @param {string} theme - Current theme ('dark' | 'light')
+ */
 function updateThemeToggle(theme) {
   const btn = document.getElementById('themeToggle');
   if (!btn) return;
