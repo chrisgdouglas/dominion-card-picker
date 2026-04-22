@@ -422,7 +422,7 @@ function makeCardCell(cardObj) {
   const div = document.createElement('div');
   div.className = `card-cell set-${cardObj.set}`;
   const imgSrc = cardObj.set === 'custom' ? 'cards/000.png' : `cards/${cardObj.id}.jpg`;
-  const title = `${cardObj.name} — Cost: ${cardObj.cost} — Set: ${cardObj.set}`;
+  const title = `${cardObj.name}  Cost: ${cardObj.cost}  Set: ${cardObj.set}`;
 
   if (cardObj.set === 'custom') {
     div.classList.add('custom');

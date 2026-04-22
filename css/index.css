@@ -214,6 +214,11 @@ h1 { font-size: 1.15rem; font-weight: 600; letter-spacing: .01em; }
   .sidebar-track.collapsed .sidebar-toggle-icon {
     transform: rotate(180deg);
   }
+
+  /* Hide form content when collapsed; sticky breaks overflow:hidden clipping */
+  .sidebar-track.collapsed form[name="controlForm"] {
+    display: none;
+  }
 }
 
 /* ════════════════════════════════════════════════════
