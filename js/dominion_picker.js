@@ -44,17 +44,20 @@ const SMART_REACTIONS = {
 const HINTERLANDS_BOTH = new Set([
   'Torturer', 'Sea Hag', 'Familiar', 'Mountebank', 'Jester', 'Tournament', 'Noble Brigand',
 ]);
+
 /** Dark Ages Reaction: triggers Tunnel only */
 const HINTERLANDS_TUNNEL_ONLY = new Set([
   'Witch', 'Saboteur', 'Swindler', 'Ambassador', 'Scrying Pool',
   'Young Witch', 'Oracle', 'Pillage',
 ]);
+
 /** Dark Ages Reaction: triggers Beggar */
 const DARKAGES_BEGGAR = new Set([
   'Militia', 'Spy', 'Thief', 'Minion', 'Saboteur', 'Pirate ship', 'Sea Hag',
   'Scrying Pool', 'Rabble', 'Jester', 'Margrave', 'Noble Brigand',
   'Oracle', 'Rogue', 'Taxman',
 ]);
+
 /** Dark Ages Reaction: triggers Market Square */
 const DARKAGES_MARKET_SQUARE = new Set(['Saboteur', 'Swindler', 'Noble Brigand', 'Rogue']);
 
