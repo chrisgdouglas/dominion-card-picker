@@ -2,7 +2,7 @@
 // then renders the result tables. Card data and pre-gen sets come from
 // js/card_data.js (window.cards, window.preGenSets).
 
-const { cards, preGenSets } = window;
+//const { cards, preGenSets } = window;
 
 /** @type {Object<string, string>} Main expansion sets: form-field key → display label */
 const CARD_SETS = {
