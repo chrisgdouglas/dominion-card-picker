@@ -645,12 +645,30 @@ select:hover, select:focus { border-color: var(--accent); outline: none; }
    ---------------------------------------------------- */
 .site-footer {
   border-top: 1px solid var(--border);
-  padding: 18px 24px;
+  padding: 5px 24px;
   font-size: .72rem;
   color: var(--text-muted);
   text-align: center;
   line-height: 1.8;
   flex-shrink: 0;
+}
+
+.download-link {
+  display: inline-block;
+  margin-top: 0px;
+  padding: 6px 14px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--accent);
+  font-weight: 500;
+  text-decoration: none;
+  transition: all var(--transition);
+  font-size: 1rem;
+}
+.download-link:hover {
+  background: var(--bg-hover);
+  border-color: var(--accent);
 }
 
 /* ----------------------------------------------------
